@@ -7,6 +7,7 @@ import { getBasketTotal } from '../../reducer';
 import { useStateValue } from '../../StateProvider';
 import CheckoutProduct from '../CheckoutProduct/CheckoutProduct';
 import './Payment.css';
+import { db } from '../../firebase';
 
 function Payment() {
     const [{ basket, user }, dispatch] = useStateValue();
@@ -35,8 +36,6 @@ function Payment() {
         getClientSecret();
     }, [basket]);
 
-    console.log('the secret is', clientSecret);
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setProcessing(true);
@@ -48,9 +47,24 @@ function Payment() {
         }).then(({ paymentIntent }) => {
             // paymentIntent = payment confirmation
 
+            db
+                .collection('users')
+                .doc(user?.uid)
+                .collection('orders')
+                .doc(paymentIntent.id)
+                .set({
+                    basket: basket,
+                    amount: paymentIntent.amount,
+                    created: paymentIntent.created
+                })
+
             setSucceeded(true);
             setError(null);
             setProcessing(false);
+
+            dispatch({
+                type: "EMPTY_BASKET"
+            })
 
             // replace because we don't want the user to go back to the payments page
             history.replace('/orders');
@@ -82,7 +96,7 @@ function Payment() {
 
                 <div className="payment__section">
                     <div className="payment__title">
-                        <h3>Review items and delivery</h3>
+                        <h3>Review Items and Delivery</h3>
                     </div>
                     <div className="payment__items">
                         {basket.map(item => (
@@ -103,7 +117,7 @@ function Payment() {
                     </div>
                     <div className="payment__details">
                         <form onSubmit={handleSubmit}>
-                            <CardElement onChange={handleChange}/>
+                            <CardElement onChange={handleChange} />
                             <div className="payment__priceContainer">
                                 <CurrencyFormat
                                     renderText={(value) => (
@@ -123,6 +137,7 @@ function Payment() {
                             </div>
                             {error && <div>{error}</div>}
                         </form>
+                        <p><small>(Demo Card No: 4242 4242 4242 4242 | Date: 424 | CVC: 242 | Zip: 42424)</small></p>
                     </div>
                 </div>
 
